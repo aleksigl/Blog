@@ -91,11 +91,11 @@ def logout():
     return redirect(url_for('index'))
 
 
-@app.route('/drafts/', method=['GET'])
+@app.route('/drafts/', methods=['GET'])
 @login_required
 def list_drafts():
     drafts = Entry.query.filter_by(is_published=False).order_by(Entry.pub_date.desc())
-    return render_template("homepage.html", drafts=drafts)
+    return render_template("drafts.html", drafts=drafts)
 
 
 if __name__ == "__main__":
