@@ -1,7 +1,7 @@
 from flask import render_template, request, flash, redirect, url_for, session
 from blog import app
 from blog.models import Entry, db
-from blog.forms import EntryForm, LoginForm
+from blog.forms import EntryForm, LoginForm, DeleteForm
 import functools
 
 
@@ -30,7 +30,7 @@ def manage_entry(entry_id=None):
             try:
                 if entry:
                     form.populate_obj(entry)
-                    flash('Twoje zmiany zostały opublikowane.', 'success')
+                    flash('Twoje zmiany zostały zapisane.', 'success')
                 else:
                     entry = Entry(
                         title=form.title.data,
@@ -51,8 +51,12 @@ def manage_entry(entry_id=None):
 
 @app.route("/")
 def index():
-    all_posts = Entry.query.filter_by(is_published=True).order_by(Entry.pub_date.desc())
-    return render_template("homepage.html", all_posts=all_posts)
+    delete_form = DeleteForm()
+    page = request.args.get('page', 1, type=int)
+    per_page = 5
+    pagination = Entry.query.filter_by(is_published=True).order_by(Entry.pub_date.desc()).paginate(page=page,                                                                                     per_page=per_page)
+    entries = pagination.items
+    return render_template("homepage.html", all_posts=entries, pagination=pagination, delete_form=delete_form)
 
 
 @app.route("/new-post/", methods=["GET", "POST"])
@@ -96,6 +100,60 @@ def logout():
 def list_drafts():
     drafts = Entry.query.filter_by(is_published=False).order_by(Entry.pub_date.desc())
     return render_template("drafts.html", drafts=drafts)
+
+
+@app.route("/delete-post/<int:entry_id>", methods=["POST"])
+@login_required
+def delete_entry(entry_id):
+    form = DeleteForm()
+    if form.validate_on_submit():
+        entry = Entry.query.get_or_404(entry_id)
+        try:
+            db.session.delete(entry)
+            db.session.commit()
+            flash(f'Post o tytule "{entry.title}" został usunięty.', 'danger')
+            return redirect(request.referrer or url_for("index"))
+        except Exception as e:
+            db.session.rollback()
+            error = f"Błąd podczas usuwania: {str(e)}"
+            flash(error, 'warning')
+    else:
+        flash('Błąd w trakcie usuwania wpisu.', 'warning')
+        return redirect(request.referrer or url_for("index"))
+
+
+@app.route("/publish-post/<int:entry_id>", methods=["POST"])
+@login_required
+def publish_entry(entry_id):
+    entry = Entry.query.get_or_404(entry_id)
+    if entry.is_published:
+        flash("Post jest już opublikowany.", "warning")
+    else:
+        try:
+            entry.is_published = True
+            db.session.commit()
+            flash(f'Post "{entry.title}" został opublikowany.', "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Błąd podczas publikowania: {str(e)}', "danger")
+    return redirect(url_for("list_drafts"))
+
+
+@app.route("/unpublish-post/<int:entry_id>", methods=["POST"])
+@login_required
+def unpublish_entry(entry_id):
+    entry = Entry.query.get_or_404(entry_id)
+    if entry.is_published is False:
+        flash("Post nie jest jeszcze opublikowany.", "warning")
+    else:
+        try:
+            entry.is_published = False
+            db.session.commit()
+            flash(f'Post "{entry.title}" został przeniesiony do sekcji szkiców.', "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Błąd podczas wprowadzania zmian: {str(e)}', "danger")
+    return redirect(url_for("index"))
 
 
 if __name__ == "__main__":

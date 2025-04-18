@@ -25,3 +25,7 @@ class LoginForm(FlaskForm):
         if field.data != Config.ADMIN_PASSWORD:
             raise ValidationError("Invalid password")
         return field.data
+
+
+class DeleteForm(FlaskForm):
+    pass
