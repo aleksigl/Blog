@@ -53,7 +53,10 @@ def manage_entry(entry_id=None):
 def index():
     page = request.args.get('page', 1, type=int)
     per_page = 5
-    pagination = Entry.query.filter_by(is_published=True).order_by(Entry.pub_date.desc()).paginate(page=page, per_page=per_page)
+    pagination = Entry.query.filter_by(is_published=True).order_by(Entry.pub_date.desc()).paginate(
+        page=page,
+        per_page=per_page
+    )
     entries = pagination.items
     delete_forms = {entry.id: DeleteForm() for entry in entries}
     return render_template("homepage.html", all_posts=entries, pagination=pagination, delete_forms=delete_forms)
@@ -159,4 +162,3 @@ def unpublish_entry(entry_id):
 
 if __name__ == "__main__":
     app.run(debug=True)
-
