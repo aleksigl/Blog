@@ -51,12 +51,12 @@ def manage_entry(entry_id=None):
 
 @app.route("/")
 def index():
-    delete_form = DeleteForm()
     page = request.args.get('page', 1, type=int)
     per_page = 5
-    pagination = Entry.query.filter_by(is_published=True).order_by(Entry.pub_date.desc()).paginate(page=page,                                                                                     per_page=per_page)
+    pagination = Entry.query.filter_by(is_published=True).order_by(Entry.pub_date.desc()).paginate(page=page, per_page=per_page)
     entries = pagination.items
-    return render_template("homepage.html", all_posts=entries, pagination=pagination, delete_form=delete_form)
+    delete_forms = {entry.id: DeleteForm() for entry in entries}
+    return render_template("homepage.html", all_posts=entries, pagination=pagination, delete_forms=delete_forms)
 
 
 @app.route("/new-post/", methods=["GET", "POST"])
@@ -99,7 +99,8 @@ def logout():
 @login_required
 def list_drafts():
     drafts = Entry.query.filter_by(is_published=False).order_by(Entry.pub_date.desc())
-    return render_template("drafts.html", drafts=drafts)
+    delete_forms = {entry.id: DeleteForm() for entry in drafts}
+    return render_template("drafts.html", drafts=drafts, delete_forms=delete_forms)
 
 
 @app.route("/delete-post/<int:entry_id>", methods=["POST"])
